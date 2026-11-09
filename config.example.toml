@@ -1,0 +1,5 @@
+# Settings for this computer: copy to config.toml, or run `python score.py init`.
+# The settings page (key 0) shows them.
+active_save = "my-club"                                           # saves/<this>/save.toml
+exports_dir = "~/Documents/Sports Interactive/Football Manager 2012"  # where you save FM's Print Screen files
+currency = "£"                                                    # the money symbol FM shows

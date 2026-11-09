@@ -1,0 +1,256 @@
+# Player and staff scoring weights for FM2012.
+# Score = sum(attribute * weight) / sum(weights). Attributes not listed count as 0.
+#
+# Players: the original FM27 weights (jamiebolden/fm-scoring) with FM12's attribute names (Jumping, Aerial Ability).
+# FM12's match engine also rewards pace and acceleration heavily, so these are a reasonable start, but they have
+# not been tested against FM12 yet: see fm12_notes.md for how to calibrate them.
+
+[outfield.CB]
+Acceleration = 5
+Anticipation = 3
+Composure = 2
+Decisions = 1
+"First Touch" = 1
+Heading = 3
+Jumping = 5
+Pace = 5
+Passing = 2
+Positioning = 2
+Stamina = 1
+Strength = 3
+Tackling = 1
+"Work Rate" = 1
+
+[outfield."WB/6"]
+Acceleration = 5
+Anticipation = 3
+Composure = 1
+Decisions = 1
+Dribbling = 3
+"First Touch" = 1
+Pace = 5
+Passing = 2
+Positioning = 2
+Stamina = 4
+Strength = 1
+Tackling = 1
+Teamwork = 2
+"Work Rate" = 3
+
+[outfield.10]
+Acceleration = 5
+Anticipation = 3
+Composure = 2
+Decisions = 1
+Dribbling = 5
+Finishing = 1
+"First Touch" = 1
+"Off The Ball" = 2
+Pace = 5
+Passing = 2
+Stamina = 2
+Strength = 1
+Teamwork = 1
+"Work Rate" = 2
+
+[outfield.9]
+Acceleration = 5
+Anticipation = 3
+Composure = 2
+Decisions = 1
+Dribbling = 3
+Finishing = 3
+"First Touch" = 1
+Heading = 1
+Jumping = 5
+"Off The Ball" = 2
+Pace = 5
+Stamina = 2
+Strength = 1
+Teamwork = 1
+"Work Rate" = 2
+
+[gk]
+Acceleration = 3
+Anticipation = 1
+"Aerial Ability" = 3
+Agility = 5
+"Command of Area" = 2
+Communication = 1
+Composure = 1
+Concentration = 1
+Decisions = 1
+Handling = 0.5
+Kicking = 0.5
+"One on Ones" = 1
+Passing = 1
+Positioning = 2
+Reflexes = 5
+Throwing = 0.5
+
+# Expected best-position score by age; "vs Age" = best score / benchmark.
+# Ages above the highest listed use the highest; below the lowest use the lowest.
+[age_benchmark]
+15 = 10.3
+16 = 10.9
+17 = 11.5
+18 = 12.2
+19 = 12.6
+20 = 12.9
+21 = 13.2
+22 = 13.4
+23 = 13.7
+24 = 13.8
+
+# Staff: FM12 shows staff attributes as 1-20 numbers, so there's no [staff_words] table.
+# Each [staff.<label>] is a role; [staff_names] gives its full name. Notes: fm12_notes.md.
+[staff_names]
+Mgr = "Manager"
+AM = "Assistant Manager"
+Youth = "Youth Coach / Under-18 Manager"
+DoF = "Director of Football"
+Str = "Coach: Strength"
+Aer = "Coach: Aerobic"
+GKC = "Coach: Goalkeeping"
+Tac = "Coach: Tactics"
+Ball = "Coach: Ball Control"
+Def = "Coach: Defending"
+Att = "Coach: Attacking"
+Sht = "Coach: Shooting"
+Set = "Coach: Set Pieces"
+Scout = "Scout"
+Physio = "Physio"
+
+[staff.Mgr]  # Manager
+"Judging Player Ability" = 4
+Motivating = 4
+"Man Management" = 4
+"Tactical Knowledge" = 4
+Attacking = 3
+Defending = 3
+Determination = 3
+"Judging Player Potential" = 3
+Mental = 3
+Tactical = 3
+Technical = 3
+"Level of Discipline" = 2
+"Working With Youngsters" = 1
+
+[staff.AM]  # Assistant Manager
+"Judging Player Ability" = 4
+Motivating = 4
+"Man Management" = 4
+Determination = 3
+"Judging Player Potential" = 3
+"Tactical Knowledge" = 3
+Attacking = 2
+Defending = 2
+"Level of Discipline" = 2
+Mental = 2
+Tactical = 2
+Technical = 2
+"Working With Youngsters" = 1
+
+[staff.Youth]  # Youth coach / under-18 manager: brings youngsters on
+"Working With Youngsters" = 4
+"Judging Player Potential" = 4
+"Judging Player Ability" = 2
+Determination = 2
+"Level of Discipline" = 2
+Motivating = 2
+Mental = 1
+Tactical = 1
+Technical = 1
+Attacking = 1
+Defending = 1
+Fitness = 1
+
+[staff.DoF]  # Director of Football
+"Judging Player Ability" = 4
+"Judging Player Potential" = 4
+"Man Management" = 1
+Determination = 1
+Motivating = 1
+"Tactical Knowledge" = 1
+
+# FM12's nine training categories. A coach's stars for a category come from its coaching attribute(s) plus
+# Determination, Level of Discipline and Motivating (community rule of thumb from the FM11/12 era: check it against
+# the stars on FM12's Training > Coaches screen and adjust).
+[staff.Str]  # Strength
+Fitness = 8
+Determination = 2
+"Level of Discipline" = 2
+Motivating = 2
+"Working With Youngsters" = 1
+
+[staff.Aer]  # Aerobic
+Fitness = 8
+Determination = 2
+"Level of Discipline" = 2
+Motivating = 2
+"Working With Youngsters" = 1
+
+[staff.GKC]  # Goalkeeping
+Goalkeepers = 8
+Determination = 2
+"Level of Discipline" = 2
+Motivating = 2
+"Working With Youngsters" = 1
+
+[staff.Tac]  # Tactics
+Tactical = 8
+Determination = 2
+"Level of Discipline" = 2
+Motivating = 2
+"Working With Youngsters" = 1
+
+[staff.Ball]  # Ball Control
+Technical = 4
+Mental = 4
+Determination = 2
+"Level of Discipline" = 2
+Motivating = 2
+"Working With Youngsters" = 1
+
+[staff.Def]  # Defending
+Defending = 4
+Tactical = 4
+Determination = 2
+"Level of Discipline" = 2
+Motivating = 2
+"Working With Youngsters" = 1
+
+[staff.Att]  # Attacking
+Attacking = 4
+Tactical = 4
+Determination = 2
+"Level of Discipline" = 2
+Motivating = 2
+"Working With Youngsters" = 1
+
+[staff.Sht]  # Shooting
+Technical = 4
+Attacking = 4
+Determination = 2
+"Level of Discipline" = 2
+Motivating = 2
+"Working With Youngsters" = 1
+
+[staff.Set]  # Set Pieces
+Technical = 4
+Mental = 4
+Determination = 2
+"Level of Discipline" = 2
+Motivating = 2
+"Working With Youngsters" = 1
+
+[staff.Scout]  # Scout
+"Judging Player Ability" = 4
+"Judging Player Potential" = 4
+"Tactical Knowledge" = 2
+Adaptability = 2
+Determination = 2
+
+[staff.Physio]  # Physio
+Physiotherapy = 8
+Determination = 1

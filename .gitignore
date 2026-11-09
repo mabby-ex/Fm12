@@ -1,0 +1,8 @@
+out/
+~$*
+.DS_Store
+__pycache__/
+config.toml
+saves/
+.backup/
+.claude/settings.local.json

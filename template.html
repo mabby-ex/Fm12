@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+__THEME__
+  #filter { flex: 1; min-width: 0; font: inherit; color: var(--fg); background: transparent;
+            border: 0; border-bottom: 1px solid var(--line); padding: 2px 4px; outline: none; }
+  #filter:focus { border-bottom-color: var(--cyan); }
+  #filter.bad { border-bottom-color: var(--red); }
+  #filter::placeholder { color: var(--dim); }
+  #count { color: var(--dim); }
+  #count.copied { color: var(--green); }
+  .tile { background: var(--bg); border: 2px solid var(--blue); padding: 12px 14px; overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  th, td { padding: 5px 10px; white-space: nowrap; text-align: left; }
+  th.num, td.num { text-align: right; }
+  th { cursor: pointer; user-select: none; font-weight: normal; color: var(--purple); border-bottom: 1px solid var(--line); }
+  th.sorted { color: var(--cyan); }
+  th.curcol { text-decoration: underline; text-underline-offset: 4px; }
+  th.desc::after { content: " ↓"; } th.asc::after { content: " ↑"; }
+  tbody tr:nth-child(even) td { background: #1f2131; }
+  tr:hover td, tr.currow td { background: var(--hover); }
+  td.cur { outline: 1px solid var(--cyan); outline-offset: -1px; }
+  td.text { color: var(--purple); }
+  .loan { font-size: 11px; margin-left: 6px; user-select: none; } .loan.in { color: var(--blue); } .loan.out { color: var(--red); } .loan.trial { color: var(--yellow); }
+  td.dim, .sub { color: var(--dim); }
+  .t0 { color: var(--red); } .t1 { color: var(--orange); } .t2 { color: var(--yellow); }
+  .t3 { color: var(--cyan); } .t4 { color: var(--green); }
+  .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  @media (max-width: 900px) { .tiles { grid-template-columns: minmax(0, 1fr); } }
+  .ttitle { color: var(--cyan); font-weight: 700; margin-bottom: 6px; }
+  .tiles th { cursor: default; vertical-align: bottom; }
+  .tiles td.search { color: var(--cyan); font-weight: 700; }
+  .tiles tr.minor td { opacity: .45; }
+  #help, #detail { display: none; position: fixed; inset: 0; background: #16161ecc; align-items: center; justify-content: center; z-index: 10; }
+  #help.show, #detail.show { display: flex; }
+  #detail .tile { width: min(1000px, calc(100vw - 32px)); max-height: calc(100vh - 40px); overflow: auto; }
+  #detail table + .ttitle { margin-top: 14px; }
+  #detail .chg { font-size: 11px; margin-left: 4px; }
+  /* Weights: small, dim multipliers behind a divider, so they don't read as attribute values */
+  td.wt { color: var(--dim); font-size: 11px; border-right: 1px solid var(--line); padding-right: 12px; }
+  th.wt { border-right: 1px solid var(--line); padding-right: 12px; }
+  #detail .wt.nb { border-right: 0; }
+  #detail th.group { text-align: center; color: var(--dim); font-weight: normal; }
+  #detail th.ago { color: var(--dim); font-weight: normal; border-bottom: 0; padding-bottom: 0; }
+  #help .tile { width: min(620px, calc(100vw - 32px)); }
+  #help td:first-child { color: var(--cyan); }
+  #help b { color: var(--fg); font-weight: normal; }
+  #help .sub { white-space: normal; padding-top: 10px; }
+  .helphint { color: var(--dim); text-decoration: none; white-space: nowrap; }
+  .helphint b { color: var(--fg); font-weight: normal; }
+  .tiles td.wrap { white-space: normal; }
+  /* Grid page: formation slots × senior then youth depth */
+  #main.grid table { width: auto; }
+  #main.grid td { padding: 5px 14px; }
+  #main.grid th { cursor: default; color: var(--purple); }
+  #main.grid th.group { color: var(--dim); text-align: left; border-bottom: 0; }
+  #main.grid td.slot { color: var(--cyan); }
+  #main.grid .split { border-left: 1px solid var(--line); }
+  #main.grid .v { margin-left: 6px; }
+  #main.grid .age { color: var(--dim); font-size: 11px; margin-left: 6px; }
+  #main.grid [data-name] { cursor: pointer; }
+  #main.grid .foot { color: var(--yellow); font-size: 11px; margin-left: 5px; }
+  #main.grid div.cur { outline: 1px solid var(--cyan); outline-offset: 2px; }
+  #main.grid .notes { margin-top: 12px; white-space: normal; line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <span class="pages">__NAV__</span>
+  <input id="filter" placeholder="/ filter  e.g. age<=24 best=CB vs>=90 left=yes" spellcheck="false" autocomplete="off">
+  <span id="count"></span>
+  <a class="helphint" href="#" id="helphint"><b>?</b> keyboard shortcuts</a>
+</div>
+<div class="tile" id="main">
+  <table>
+    <thead><tr id="head"></tr></thead>
+    <tbody id="body"></tbody>
+  </table>
+</div>
+<div id="detail"><div class="tile" id="detailbody"></div></div>
+<div id="help"><div class="tile">
+  <div class="ttitle">keyboard shortcuts</div>
+  <table>
+    <tr><td><b>1</b> … <b>9</b> <b>0</b></td><td>__HOME__ · grid · elsewhere · last import · filters · charts · staff · last staff import · staff filters · settings</td></tr>
+    <tr><td><b>← ↑ ↓ →</b></td><td>move the cell cursor</td></tr>
+    <tr><td><b>enter</b></td><td>player (or staff) history over time (or double-click a row, or click a name on the grid; <b>esc</b> closes)</td></tr>
+    <tr><td><b>c</b> or <b>⌘C</b></td><td>copy the cursor's player name, for FM's search (or drag-select any text)</td></tr>
+    <tr><td><b>s</b></td><td>sort by the cursor's column (again to reverse)</td></tr>
+    <tr><td><b>/</b> or <b>f</b></td><td>filter box (<b>enter</b> / <b>esc</b> to leave it)</td></tr>
+    <tr><td><b>esc</b></td><td>clear the filter</td></tr>
+    <tr><td><b>?</b></td><td>show / hide this</td></tr>
+    <tr><td colspan="2" class="sub">filters: <b>col:text</b> contains · <b>col=x</b> · <b>col!=x</b> · <b>col&lt;n</b> <b>col&lt;=n</b> <b>col&gt;n</b> <b>col&gt;=n</b><br>
+      money: <b>wage&lt;=1k</b> <b>value&lt;=500k</b> (value = top of FM's range) · plain words match name / club, or <b>loan-in</b> / <b>loan-out</b> / <b>trial</b> · e.g. <b>club:gent age&lt;=24 best!=GK vs&gt;=90 left=yes</b></td></tr>
+  </table>
+</div></div>
+<script>
+const PAGE = "__PAGE__", SITE = __SITE__, PAGES = SITE.pages;
+const TABLE = !["grid", "filters", "staff_filters", "settings"].includes(PAGE);  // the other pages are tiles, with no table to filter or move around
+const DATA = __DATA__;
+const loanLabel = r => r.loan === "trial" ? "trial" : "loan " + r.loan;  // "loan in", "loan out", "trial"
+const FMT = {
+  f1: v => v.toFixed(1),
+  f2: v => v.toFixed(2),
+  pct: v => Math.round(v * 100) + "%",
+  money: v => SITE.currency + (v >= 1e6 ? +(v / 1e6).toFixed(2) + "M" : v >= 1e3 ? +(v / 1e3).toFixed(2) + "K" : v),
+  delta: v => Math.abs(v) < 0.05 ? "0.0" : (v > 0 ? "+" : "−") + Math.abs(v).toFixed(1),
+};
+// Colour bands: value range mapped to red → green in five steps (t0–t4)
+const RANGE = { f1: [6, 13], f2: [6.5, 7.1], pct: [0.6, 1.0], attr: [5, 15] };  // f2: average match rating
+const COLS = __COLS__;
+const WEIGHTS = __WEIGHTS__;  // { position or staff role: { attribute: weight } }
+const ALIASES = { lefty: "left", leftfoot: "left", player: "name", pos: "best", position: "best", vs: "vsAge" };
+const STORE = "fm:__SAVE__:" + PAGE;
+const input = document.getElementById("filter"), help = document.getElementById("help"), detail = document.getElementById("detail");
+let sortKey = COLS.some(c => c.key === "vsAge") ? "vsAge" : COLS.find(c => c.num && c.fmt)?.key, dir = -1, cur = { r: 0, c: 0 }, view = [];
+
+try {
+  const s = JSON.parse(localStorage.getItem(STORE) || "{}");
+  if (s.sortKey && COLS.some(c => c.key === s.sortKey)) ({ sortKey, dir } = s);
+  input.value = s.q || "";
+} catch (e) {}
+function save() {
+  try { localStorage.setItem(STORE, JSON.stringify({ sortKey, dir, q: input.value })); } catch (e) {}
+}
+
+function tier(v, [lo, hi]) {
+  return "t" + Math.max(0, Math.min(4, Math.floor((v - lo) / (hi - lo) * 5)));
+}
+
+function findCol(name) {
+  const n = name.toLowerCase().replace(/\s/g, "");
+  const key = ALIASES[n] || n;
+  return COLS.find(c => c.key.toLowerCase() === key.toLowerCase() || c.label.toLowerCase().replace(/\s/g, "") === n);
+}
+
+// Each token becomes a predicate; returns { tests, bad } where bad = a token couldn't be parsed.
+function parseFilter(q) {
+  let bad = false;
+  const tokens = q.match(/[^\s"]*"[^"]*"|\S+/g) || [];
+  const tests = tokens.map(tok => {
+    const m = tok.match(/^([^:=<>!]+)(<=|>=|!=|<|>|=|:)(.*)$/);
+    if (!m) {
+      const t = tok.replace(/"/g, "").toLowerCase();
+      return r => `${r.name} ${r.club || ""} ${r.loan ? loanLabel(r).replace(" ", "-") : ""}`.toLowerCase().includes(t);
+    }
+    const col = findCol(m[1]), op = m[2], raw = m[3].replace(/"/g, "");
+    if (!col || raw === "") { bad = true; return () => true; }
+    if (col.num) {
+      const mm = raw.match(/^[^\d.]?([\d.]+)([km]?)%?$/i);
+      if (!mm) { bad = true; return () => true; }
+      let n = parseFloat(mm[1]) * { "": 1, k: 1e3, m: 1e6 }[mm[2].toLowerCase()];
+      if (col.fmt === "pct" && (raw.endsWith("%") || n > 1.5)) n /= 100;
+      const cmp = { "<": (a, b) => a < b, "<=": (a, b) => a <= b, ">": (a, b) => a > b, ">=": (a, b) => a >= b,
+                    "=": (a, b) => Math.abs(a - b) < 1e-9, ":": (a, b) => Math.abs(a - b) < 1e-9, "!=": (a, b) => a !== b }[op];
+      return r => r[col.key] != null && cmp(r[col.key], n);
+    }
+    const t = raw.toLowerCase();
+    return {
+      ":": r => String(r[col.key] ?? "").toLowerCase().includes(t),
+      "=": r => String(r[col.key] ?? "").toLowerCase() === t,
+      "!=": r => String(r[col.key] ?? "").toLowerCase() !== t,
+    }[op] || (() => { bad = true; return true; });
+  });
+  return { tests, bad };
+}
+
+function render() {
+  const { tests, bad } = parseFilter(input.value);
+  input.classList.toggle("bad", bad);
+  view = DATA.filter(r => tests.every(t => t(r))).sort((a, b) => {
+    const x = a[sortKey], y = b[sortKey];
+    if (x == null || y == null) return (x == null) - (y == null);  // blanks always last
+    return (typeof x === "number" ? x - y : String(x).localeCompare(String(y))) * dir;
+  });
+  cur.r = Math.max(0, Math.min(cur.r, view.length - 1));
+  cur.c = Math.max(0, Math.min(cur.c, COLS.length - 1));
+  document.getElementById("count").textContent = `${view.length}/${DATA.length}`;
+  document.getElementById("head").innerHTML = COLS.map((c, ci) =>
+    `<th data-key="${c.key}" class="${c.num ? "num" : ""} ${c.key === sortKey ? "sorted " + (dir > 0 ? "asc" : "desc") : ""} ${ci === cur.c ? "curcol" : ""}">${c.label}</th>`).join("");
+  document.getElementById("body").innerHTML = view.map((r, ri) => `<tr class="${ri === cur.r ? "currow" : ""}">` + COLS.map((c, ci) => {
+    const v = r[c.key], at = ri === cur.r && ci === cur.c ? " cur" : "";
+    if (v == null) return `<td class="${c.num ? "num " : ""}dim${at}">–</td>`;
+    if (c.fmt === "money") return `<td class="num${at}">${FMT.money(v)}</td>`;
+    if (c.fmt === "range") return `<td class="num${at}">${r.valueLo === v ? FMT.money(v) : FMT.money(r.valueLo) + "–" + FMT.money(v)}</td>`;
+    if (c.fmt === "yesno") return `<td class="${v === "yes" ? "t4" : "dim"}${at}">${v}</td>`;
+    if (c.fmt) return `<td class="num ${tier(v, RANGE[c.fmt])}${at}">${FMT[c.fmt](v)}</td>`;
+    if (c.key === "name") return `<td class="${at}">${v}${r.loan ? `<span class="loan ${r.loan}">${loanLabel(r)}</span>` : ""}</td>`;
+    return `<td class="${c.num ? "num" : "text"}${at}">${v}</td>`;
+  }).join("") + "</tr>").join("");
+  document.querySelector("td.cur")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  save();
+}
+
+function sortBy(ci) {
+  const key = COLS[ci].key;
+  if (key === sortKey) dir = -dir;
+  else { sortKey = key; dir = COLS[ci].num ? -1 : 1; }
+  cur.r = 0;
+  render();
+}
+
+document.addEventListener("keydown", e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (document.activeElement === input) {
+    if (e.key === "Escape" || e.key === "Enter") input.blur();
+    return;
+  }
+  if (detail.classList.contains("show")) {
+    if (e.key === "Escape" || e.key === "Enter") { detail.classList.remove("show"); e.preventDefault(); }
+    return;
+  }
+  if (e.key === "?") { help.classList.toggle("show"); e.preventDefault(); return; }
+  if (e.key === "Escape" && help.classList.contains("show")) { help.classList.remove("show"); return; }
+  if (PAGES[e.key] && PAGES[e.key] !== PAGE) { location.href = PAGES[e.key] + ".html"; return; }
+  if (PAGE === "grid") {
+    const move = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key];
+    if (move) {
+      const k = (cur.k ?? 0) + move[0];  // up / down step through a cell's players first
+      if (move[0] && k >= 0 && k < gridCell().length) cur.k = k;
+      else { cur.r += move[0]; cur.c += move[1]; cur.k = move[0] < 0 ? gridCell(Math.max(0, cur.r)).length - 1 : 0; }
+      renderGrid();
+    }
+    else if (e.key === "Enter" && curPlayer()) showDetail(curPlayer());
+    else if (e.key === "c") document.execCommand("copy");
+    else return;
+    e.preventDefault();
+    return;
+  }
+  if (!TABLE) return;
+  const move = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key];
+  if (move) { cur.r += move[0]; cur.c += move[1]; render(); }
+  else if (e.key === "s") sortBy(cur.c);
+  else if (e.key === "c") document.execCommand("copy");
+  else if (e.key === "Enter" && view[cur.r]) showDetail(view[cur.r]);
+  else if (e.key === "/" || e.key === "f") input.focus();
+  else if (e.key === "Escape") { input.value = ""; render(); }
+  else return;
+  e.preventDefault();
+});
+
+// The attributes table shows one date per transfer window, newest first: each observation goes to its nearest
+// window (Oct–Mar → January, Apr–Sep → summer), which keeps the date closest to 1 Jan / 1 Jul; the latest always shows
+function windowDates(H) {
+  const win = new Map(), last = H[H.length - 1];
+  const key = d => { const [y, m] = d.split("-").map(Number); return m >= 10 ? [y + 1, 1] : m <= 3 ? [y, 1] : [y, 7]; };
+  for (const h of H) {
+    const [y, m] = key(h.date), k = `${y}-${m}`;
+    const off = Math.abs(new Date(h.date) - new Date(Date.UTC(y, m - 1, 1)));
+    const cur = win.get(k);
+    if (cur?.h === last) continue;
+    if (h === last || !cur || off < cur.off) win.set(k, { h, off });
+  }
+  return [...win.values()].map(w => w.h).sort((a, b) => b.date.localeCompare(a.date));
+}
+
+// Game time since a date, to the save's latest game date (any import): "1.5 years"; blank for now (0.0)
+const yearsAgo = d => {
+  const y = SITE.gameDate ? ((new Date(SITE.gameDate) - new Date(d)) / 31557600000).toFixed(1) : "0.0";
+  return y === "0.0" ? "" : `${y} years`;
+};
+
+// Player history: one row per observation date, then attribute values by date
+function showDetail(r) {
+  const H = r.history, last = H[H.length - 1], vs = H.some(h => h.vsAge != null);
+  const pos = COLS.filter(c => c.fmt === "f1" && c.key !== "score" && H.some(h => h[c.key] != null)).map(c => c.key);
+  const chg = (v, p) => p == null || Math.abs(v - p) < 0.05 ? "" :
+    `<span class="chg ${v > p ? "t4" : "t0"}">${FMT.delta(v - p)}</span>`;
+  const scoreRows = H.map((h, i) => {
+    const p = H[i - 1];
+    return `<tr><td>${h.date}</td><td class="text">${h.club}</td><td class="num">${h.age ?? "–"}</td>` +
+      pos.map(k => `<td class="num ${tier(h[k], RANGE.f1)}">${FMT.f1(h[k])}${chg(h[k], p?.[k])}</td>`).join("") +
+      `<td class="text">${h.best ?? "–"}</td>${vs ? `<td class="num ${tier(h.vsAge, RANGE.pct)}">${FMT.pct(h.vsAge)}</td>` : ""}</tr>`;
+  }).join("");
+  // Attributes ranked by the best position's (or staff role's) weight, alphabetical within a weight
+  const wpos = [last.best].filter(k => WEIGHTS[k]), wt = a => wpos.length ? WEIGHTS[wpos[0]][a] ?? 0 : 0;
+  const attrs = Object.keys(last.attrs).sort((a, b) => wt(b) - wt(a) || a.localeCompare(b));
+  const AH = windowDates(H), gr = H.length > 1;
+  // Growth: latest known value minus the first, over every observation
+  const growth = a => {
+    const vs = H.map(h => h.attrs[a]).filter(v => v != null), g = vs.length > 1 ? vs[vs.length - 1] - vs[0] : 0;
+    return `<td class="num wt">${g ? `<span class="${g > 0 ? "t4" : "t0"}">${g > 0 ? "+" : "−"}${Math.abs(g)}</span>` : ""}</td>`;
+  };
+  const attrRows = attrs.map(a => `<tr><td>${a}</td>` +
+    wpos.map(() => `<td class="num wt${gr ? " nb" : ""}">${wt(a) ? "×" + wt(a) : "–"}</td>`).join("") + (gr ? growth(a) : "") + AH.map((h, i) => {
+    const v = h.attrs[a], p = AH[i + 1]?.attrs[a];
+    return v == null ? `<td class="num dim">–</td>` :
+      `<td class="num ${tier(v, RANGE.attr)}">${v}${p == null || p === v ? "" : `<span class="chg ${v > p ? "t4" : "t0"}">${v > p ? "+" : "−"}${Math.abs(v - p)}</span>`}</td>`;
+  }).join("") + "</tr>").join("");
+  document.getElementById("detailbody").innerHTML = `
+    <div class="ttitle">${r.name} <span class="sub">· ${[r.club, r.age != null && r.age + "y",
+      ...("job" in r ? [r.job, r.personality] : ["left foot " + (last.leftFoot ?? "–"), r.loan && loanLabel(r)])].filter(Boolean).join(" · ")}</span></div>
+    ${H.length === 1 ? `<div class="sub">Only one observation so far (${last.date}); changes appear once you import exports from a later game date.</div>` : ""}
+    <table><thead><tr><th>Date</th><th>Club</th><th class="num">Age</th>${pos.map(k => `<th class="num">${k}</th>`).join("")}<th>Best</th>${vs ? `<th class="num">vs Age</th>` : ""}</tr></thead>
+      <tbody>${scoreRows}</tbody></table>
+    <div class="ttitle">Attributes</div>
+    <table><thead>${wpos.length ? `<tr><th></th><th class="group wt${gr ? " nb" : ""}">weight</th>${gr ? `<th class="group wt">growth</th>` : ""}<th class="group" colspan="${AH.length}">value</th></tr>` : ""}
+      <tr><th class="ago"></th>${wpos.map(() => `<th class="wt ago${gr ? " nb" : ""}"></th>`).join("")}${gr ? `<th class="wt ago"></th>` : ""}${AH.map(h => `<th class="num ago">${yearsAgo(h.date)}</th>`).join("")}</tr>
+      <tr><th></th>${wpos.map(k => `<th class="num wt${gr ? " nb" : ""}">${k}</th>`).join("")}${gr ? `<th class="num wt">${yearsAgo(H[0].date)}</th>` : ""}${AH.map(h => `<th class="num">${h.date}</th>`).join("")}</tr></thead>
+      <tbody>${attrRows}</tbody></table>`;
+  detail.classList.add("show");
+}
+
+// Filters pages: DATA is one entry per position or staff role (filters() and staff_filters() in score.py); staff values come with FM's words as labels
+function renderFilters() {
+  input.style.visibility = "hidden";
+  const main = document.getElementById("main");
+  main.className = "tiles";
+  main.innerHTML = DATA.map(f => `<div class="tile">
+    <div class="ttitle">${f.pos}${f.title ? ` <span class="sub">· ${f.title}</span>` : ""}</div>
+    <table>
+      <thead><tr><th>Attribute</th><th class="num wt">Wt</th>${f.players.map(p =>
+        `<th class="num">${p.name}<br><span class="sub">${p.age != null ? p.age + "y · " : ""}${p.score.toFixed(1)}</span></th>`).join("")}<th class="num search">Search ≥</th></tr></thead>
+      <tbody>${f.rows.map(r => `<tr class="${r.min == null ? "minor" : ""}"><td>${r.attr}</td><td class="num wt">×${r.weight}</td>${r.values.map((v, i) =>
+        `<td class="num ${tier(v, RANGE.attr)}">${r.labels ? r.labels[i] : v}</td>`).join("")}<td class="num search">${r.min == null ? "–" : r.min}</td></tr>`).join("")}</tbody>
+    </table></div>`).join("");
+}
+// Grid page: DATA = { slots: [{ label, pos, senior: [player|null ×3], youth: [...] }], spare, spareYouth, loanOut } (grid() in score.py)
+function renderGrid() {
+  input.style.visibility = "hidden";
+  const main = document.getElementById("main"), d = DATA, n = 3;
+  main.className = "tile grid";
+  const surname = name => name.split(" ").pop();
+  cur.r = Math.max(0, Math.min(cur.r, d.slots.length - 1));
+  const groups = d.slots.some(s => s.intake.some(c => c.length)) ? 3 : 2;  // the intake columns only while there's an intake
+  cur.c = Math.max(0, Math.min(cur.c, groups * n - 1));
+  cur.k = Math.max(0, Math.min(cur.k ?? 0, gridCell().length - 1));
+  const entry = (p, youth, here) => `<div class="${here ? "cur" : ""}" data-name="${esc(p.name)}">` +
+    `<span title="${esc(p.name)}">${esc(surname(p.name))}</span>` +
+    (youth ? `<span class="v ${tier(p.v, RANGE.pct)}">${FMT.pct(p.v)}</span><span class="age">${FMT.f1(p.score)}</span>` :
+      `<span class="v ${tier(p.score, RANGE.f1)}">${FMT.f1(p.score)}</span>`) +
+    (p.pct != null ? `<span class="v ${tier(p.pct, RANGE.pct)}">${FMT.pct(p.pct)}</span>` : "") +
+    (youth || p.pct != null ? `<span class="age">${p.age}y</span>` : "") + (youth && p.left ? `<span class="foot" title="left foot Fairly Strong or better">L</span>` : "") + (p.loan ? `<span class="loan ${p.loan}">${loanLabel(p)}</span>` : "") + "</div>";
+  const cell = (ps, youth, ri, ci) => {
+    const at = ri === cur.r && ci === cur.c;
+    return `<td class="${ci === n || ci === 2 * n ? "split" : ""}${at && !ps.length ? " cur" : ""}" data-r="${ri}" data-c="${ci}">` +
+      (ps.length ? ps.map((p, k) => entry(p, youth, at && k === cur.k)).join("") : `<span class="dim">–</span>`) + "</td>";
+  };
+  const heads = ["Starter", "Backup", "Third"];
+  const list = (title, ps, fmt) => ps.length ? `<div><span class="sub">${title}:</span> ${ps.map(p =>
+    `<span title="${esc(p.name)}" data-name="${esc(p.name)}">${esc(surname(p.name))}</span> <span class="sub">${p.age}y ${p.pos} ${fmt(p.v)}</span>`).join(" · ")}</div>` : "";
+  main.innerHTML = `<table>
+    <thead><tr><th></th>${heads.map(h => `<th>${h}</th>`).join("")}${["Youth", "Intake"].slice(0, groups - 1).map(g => heads.map((h, i) => `<th class="${i ? "" : "split"}">${g} ${i + 1}</th>`).join("")).join("")}</tr></thead>
+    <tbody>${d.slots.map((s, ri) => `<tr><td class="slot" title="scored as ${esc(s.pos)}${s.left ? ", left-footed only" : ""}">${esc(s.label)}</td>` +
+      s.senior.map((ps, i) => cell(ps, false, ri, i)).join("") + s.youth.map((ps, i) => cell(ps, true, ri, n + i)).join("") +
+      (groups > 2 ? s.intake.map((ps, i) => cell(ps, true, ri, 2 * n + i)).join("") : "") + "</tr>").join("")}</tbody>
+  </table>
+  <div class="notes">${list("Not placed", d.spare, FMT.f1)}${list("Youth not placed", d.spareYouth, FMT.pct)}${list("Out on loan", d.loanOut, FMT.f1)}</div>`;
+}
+// The grid cell under the cursor: its players (Third can hold several)
+function gridCell(r = cur.r, c = cur.c) {
+  const s = DATA.slots[r];
+  return s ? (c < 3 ? s.senior[c] : c < 6 ? s.youth[c - 3] : s.intake[c - 6]) ?? [] : [];
+}
+// The player under the cursor: a table row, or on the grid the player at the cursor
+function curPlayer() {
+  if (PAGE !== "grid") return view[cur.r];
+  const p = gridCell()[cur.k];
+  return p ? DATA.players[p.name] : undefined;
+}
+// Grid: click a name for its history (and move the cursor there)
+document.getElementById("main").addEventListener("click", e => {
+  const el = PAGE === "grid" && e.target.closest("[data-name]");
+  if (!el || !getSelection().isCollapsed) return;
+  const td = el.closest("td[data-r]");
+  if (td) { cur = { r: +td.dataset.r, c: +td.dataset.c, k: [...td.querySelectorAll("[data-name]")].indexOf(el) }; renderGrid(); }
+  showDetail(DATA.players[el.dataset.name]);
+});
+// Settings page: DATA = [{ path, values }], one per settings file (settings() in score.py)
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+function renderSettings() {
+  input.style.visibility = "hidden";
+  const main = document.getElementById("main");
+  main.className = "tiles";
+  const val = v => Array.isArray(v) ? (v.length ? v.map(val).join(", ") : "–") : v === "" ? "–" :
+    typeof v === "object" ? (v.label ? `${v.label} (${v.pos}${v.left ? ", left" : ""})` : JSON.stringify(v)) : v;
+  main.innerHTML = DATA.map(f => `<div class="tile"><div class="ttitle">${esc(f.path)}</div>
+    <table>${Object.entries(f.values).map(([k, v]) => `<tr><td class="text">${esc(k)}</td><td class="wrap">${esc(val(v))}</td></tr>`).join("")}</table>
+  </div>`).join("") + `<div class="sub">To change a setting, edit its file, then run <b>python3 score.py</b> again.</div>`;
+}
+document.getElementById("head").addEventListener("click", e => {
+  const ci = COLS.findIndex(c => c.key === e.target.dataset.key);
+  if (ci >= 0) { cur.c = ci; sortBy(ci); }
+});
+document.getElementById("body").addEventListener("click", e => {
+  const td = e.target.closest("td");
+  if (!td || !getSelection().isCollapsed) return;  // re-rendering would drop a text selection
+  cur = { r: td.parentElement.rowIndex - 1, c: td.cellIndex };
+  render();
+});
+document.getElementById("body").addEventListener("dblclick", e => {
+  const tr = e.target.closest("tr");
+  if (tr) showDetail(view[tr.rowIndex - 1]);
+});
+// Copy with nothing selected: the cursor row's name, minus FM's truncation "…"
+document.addEventListener("copy", e => {
+  if (document.activeElement === input || !getSelection().isCollapsed || !curPlayer()) return;
+  const name = curPlayer().name.replace(/…$/, "").trim();
+  e.clipboardData.setData("text/plain", name);
+  e.preventDefault();
+  const count = document.getElementById("count");
+  count.textContent = `copied ${name}`; count.classList.add("copied");
+  clearTimeout(count.timer);
+  count.timer = setTimeout(() => { count.classList.remove("copied"); if (PAGE === "grid") count.textContent = ""; else render(); }, 1200);
+});
+input.addEventListener("input", () => { cur.r = 0; render(); });
+help.addEventListener("click", e => { if (e.target === help) help.classList.remove("show"); });
+detail.addEventListener("click", e => { if (e.target === detail) detail.classList.remove("show"); });
+document.getElementById("helphint").addEventListener("click", e => { e.preventDefault(); help.classList.add("show"); });
+if (PAGE.endsWith("staff")) input.placeholder = "/ filter  e.g. job:coach Str>=12 age<=50";
+if (PAGE === "filters" || PAGE === "staff_filters") renderFilters(); else if (PAGE === "grid") renderGrid(); else if (PAGE === "settings") renderSettings(); else render();
+</script>
+</body>
+</html>
